@@ -1,1 +1,39 @@
-I will put some content in here at some point :)
+steps:
+  - name: "gcr.io/cloud-builders/gcloud"
+    id: "create zip from source"
+    entrypoint: "/bin/bash"
+    args:
+      - "-c"
+      - |
+        set -x && \
+        apt-get update && \
+        apt-get install -y zip && \
+        ls && \
+        zip -r /mnt/data/blaise-cloudsql-backup.zip ./*
+    volumes:
+      - name: "data"
+        path: /mnt/data
+
+  - name: "gcr.io/cloud-builders/gcloud"
+    id: "push zip to functions source bucket"
+    entrypoint: "/bin/bash"
+    args:
+      - "-c"
+      - |
+        gsutil cp /mnt/data/blaise-cloudsql-backup.zip gs://ons-blaise-$_ENV-blaise-cloud-functions-source/
+    volumes:
+      - name: "data"
+        path: /mnt/data
+
+  - name: "gcr.io/cloud-builders/gcloud"
+    id: "Trigger deploy of ExtractFunction from new zip"
+    waitFor: ["push zip to functions source bucket"]
+    args:
+    - functions
+    - deploy
+    - cloudsql-backup 
+    - --source=gs://ons-blaise-$_ENV-blaise-cloud-functions-source/blaise-cloudsql-backup.zip
+    - --entry-point=exportDatabase
+    - --region=europe-west2 
+    - --runtime=nodejs10
+    - --trigger-http
