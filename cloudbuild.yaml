@@ -36,4 +36,5 @@ steps:
     - --entry-point=exportDatabase
     - --region=europe-west2 
     - --runtime=nodejs10
-    - --trigger-http
+    - --trigger-event=google.pubsub.topic.publish
+    - --trigger-resource=cloudsql-backup-topic
